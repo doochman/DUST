@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DUST: The Crack in Reality</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevent scrollbars from the canvas */
+        }
+        /* Style for the text to make it stand out with a subtle glow */
+        .text-glow {
+            text-shadow: 0 0 8px rgba(251, 191, 36, 0.3), 0 0 20px rgba(251, 191, 36, 0.2);
+        }
+        /* Keyframe animations for the text and button fade-in */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Classes to apply the animations with delays */
+        .fade-in-1 { animation: fadeIn 2s ease-in-out 1s forwards; }
+        .fade-in-up-2 { animation: fadeInUp 1.5s ease-in-out 2.5s forwards; }
+        .fade-in-up-3 { animation: fadeInUp 1.5s ease-in-out 4s forwards; }
+    </style>
+</head>
+<body class="bg-black text-white m-0 p-0">
+
+    <!-- The container for the 3D scene -->
+    <div id="canvas-container" class="absolute top-0 left-0 w-full h-full z-0"></div>
+
+    <!-- The overlay content container -->
+    <div class="relative w-full h-screen flex flex-col justify-center items-center text-center p-4 z-10">
+        <!-- Main Headline -->
+        <h1 id="headline" class="text-4xl md:text-6xl lg:text-7xl font-bold text-gray-100 text-glow opacity-0 fade-in-1">
+            Everything You Know Is Incomplete.
+        </h1>
+        
+        <!-- Sub-headline -->
+        <p id="subheadline" class="mt-6 text-lg md:text-xl lg:text-2xl text-gray-300 max-w-3xl opacity-0 fade-in-up-2">
+            For a century, science has been haunted by paradoxes. The universe has been leaving clues. It's time to see them.
+        </p>
+
+        <!-- Call to Action Button -->
+        <button id="cta-button" class="mt-12 bg-amber-400/10 border border-amber-400 text-amber-300 font-bold py-3 px-8 rounded-lg text-xl hover:bg-amber-400/20 hover:shadow-lg hover:shadow-amber-400/20 transition-all duration-300 transform hover:scale-105 opacity-0 fade-in-up-3">
+            PEER INTO THE CRACK
+        </button>
+    </div>
+
+    <script>
+        // Ensure the script runs after the DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- THREE.JS SCENE SETUP ---
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            const container = document.getElementById('canvas-container');
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // --- LIGHTING ---
+            // Ambient light to softly illuminate the scene
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            scene.add(ambientLight);
+            // Point light to create highlights and reflections
+            const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+            pointLight.position.set(5, 5, 5);
+            scene.add(pointLight);
+
+            // --- THE SPHERE (REPRESENTING MODERN PHYSICS) ---
+            const geometry = new THREE.SphereGeometry(2.5, 64, 64);
+            
+            // Create a canvas for the emissive crack texture
+            const crackCanvas = document.createElement('canvas');
+            crackCanvas.width = 2048;
+            crackCanvas.height = 1024;
+            const crackContext = crackCanvas.getContext('2d');
+            
+            // Fill the canvas with black initially
+            crackContext.fillStyle = 'black';
+            crackContext.fillRect(0, 0, crackCanvas.width, crackCanvas.height);
+
+            const emissiveTexture = new THREE.CanvasTexture(crackCanvas);
+
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x0a0a0a, // Very dark grey, almost black
+                metalness: 0.8,   // Highly metallic
+                roughness: 0.05,  // Very smooth and reflective
+                emissive: 0xffb700, // Golden color for the crack
+                emissiveMap: emissiveTexture,
+                emissiveIntensity: 2
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            scene.add(sphere);
+
+            camera.position.z = 6;
+
+            // --- ANIMATION LOGIC FOR THE CRACK ---
+            let crackProgress = 0;
+            const crackDuration = 6000; // 6 seconds
+            const startTime = Date.now();
+
+            // Function to generate a point on a sphere (Fibonacci lattice for even distribution)
+            function fibonacciSphere(samples, i) {
+                const phi = Math.PI * (3. - Math.sqrt(5.)); // Golden angle in radians
+                const y = 1 - (i / (samples - 1)) * 2;      // y goes from 1 to -1
+                const radius = Math.sqrt(1 - y * y);        // radius at y
+
+                const theta = phi * i; // Golden angle increment
+
+                const x = Math.cos(theta) * radius;
+                const z = Math.sin(theta) * radius;
+
+                return new THREE.Vector3(x, y, z);
+            }
+            
+            // Generate a path for the crack
+            const crackPath = [];
+            const numPoints = 1000;
+            for(let i = 0; i < numPoints; i++) {
+                crackPath.push(fibonacciSphere(numPoints, i));
+            }
+            // Sort points to make a somewhat continuous path (simplification)
+            crackPath.sort((a,b) => a.angleTo(new THREE.Vector3(1,0,0)) - b.angleTo(new THREE.Vector3(1,0,0)));
+
+
+            function animate() {
+                requestAnimationFrame(animate);
+
+                const elapsedTime = Date.now() - startTime;
+                crackProgress = Math.min(elapsedTime / crackDuration, 1);
+
+                // --- Update Crack Texture ---
+                if (crackProgress < 1) {
+                    const currentIndex = Math.floor(crackProgress * crackPath.length);
+                    const point = crackPath[currentIndex];
+                    
+                    // Convert 3D point on sphere to 2D UV coordinates
+                    const u = 0.5 + Math.atan2(point.z, point.x) / (2 * Math.PI);
+                    const v = 0.5 - Math.asin(point.y) / Math.PI;
+
+                    // Draw a glowing dot on the canvas
+                    const grad = crackContext.createRadialGradient(
+                        u * crackCanvas.width, v * crackCanvas.height, 0,
+                        u * crackCanvas.width, v * crackCanvas.height, 10
+                    );
+                    grad.addColorStop(0, 'rgba(255, 204, 0, 0.8)');
+                    grad.addColorStop(1, 'rgba(255, 165, 0, 0)');
+                    
+                    crackContext.fillStyle = grad;
+                    crackContext.beginPath();
+                    crackContext.arc(u * crackCanvas.width, v * crackCanvas.height, 10, 0, Math.PI * 2);
+                    crackContext.fill();
+                    
+                    emissiveTexture.needsUpdate = true;
+                }
+
+                // --- Animate Sphere Rotation ---
+                sphere.rotation.y += 0.0005;
+                sphere.rotation.x += 0.0003;
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            // --- Handle window resize ---
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }, false);
+
+            // --- CTA Button Logic ---
+            // In a real multi-page site, this would navigate to the next page.
+            document.getElementById('cta-button').addEventListener('click', () => {
+                // Placeholder for navigation
+                alert('Navigating to the next part of the story...'); 
+            });
+        });
+    </script>
+</body>
+</html>
